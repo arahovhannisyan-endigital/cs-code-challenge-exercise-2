@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title>Todo list App</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link href='http://fonts.googleapis.com/css?family=Lato:300,400,700' rel='stylesheet' type='text/css'>
+</head>
+
+<body>
+<div class="container">
+  <div class="row">
+    <div class="item">
+      <h3>
+        <b>Add Item</b>
+      </h3>
+      <div class="add-item">
+        <label id="new-task-label" for="new-task">
+          <input id="new-task" type="text">
+        </label>
+        <button>Add</button>
+      </div>
+    </div>
+
+    <div class="item">
+      <h3>
+        <b>Todo</b>
+      </h3>
+      <ul id="incomplete-tasks"></ul>
+    </div>
+
+    <div class="item">
+      <h3>
+        <b>Completed</b>
+      </h3>
+      <ul id="completed-tasks"></ul>
+    </div>
+  </div>
+</div>
+
+<script src="localData.js"></script>
+<script>
+  (function(){
+    var taskInput = document.getElementById("new-task");
+    var addButton = document.getElementsByTagName("button")[0];
+    var incompleteTasksHolder = document.getElementById("incomplete-tasks");
+    var completedTasksHolder = document.getElementById("completed-tasks");
+    let tasksData = JSON.parse(localStorage.getItem('tasksData')) || localData;
+
+    function uuidv4() {
+      return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+      });
+    }
+
+    var addTask = function () {
+      if (taskInput.value.trim() === "") {
+        taskInput.classList.add("invalid");
+        return
+      }
+
+      taskInput.classList.remove("invalid");
+      var listItemName = taskInput.value;
+      let newItem = {
+        id: uuidv4(),
+        title: listItemName,
+        completed: false
+      };
+      tasksData.push(newItem);
+      initialToDoData();
+      localStorage.setItem('tasksData', JSON.stringify(tasksData));
+      taskInput.value = "";
+    };
+
+    var editTask = function () {
+      var editButton = document.querySelectorAll("button.edit");
+      for (var i = 0; i < editButton.length; i++) {
+        editButton[i].addEventListener('click', function () {
+          let id = this.parentElement.getAttribute('data-id');
+          let saveBtn = this.parentElement.querySelector('.save');
+          let editBtn = this;
+          let editInput = document.getElementById('text-' + id);
+          editBtn.parentElement.classList.add('editMode');
+          editInput.value = this.parentElement.querySelector('h4').innerText;
+          editBtn.style.display = "none";
+          saveBtn.style.display = "block";
+
+          let saveChanges = function() {
+            if (editInput.value.trim() === "") {
+              editInput.classList.add("invalid");
+              return
+            }
+
+            editInput.classList.remove("invalid");
+            tasksData.filter(x => x.id === id).map(y => y.title = editInput.value);
+            initialToDoData();
+            editBtn.style.display = "block";
+            saveBtn.style.display = "none";
+            editBtn.parentElement.classList.remove('editMode');
+          };
+
+          saveBtn.addEventListener('click', function () {saveChanges()});
+          editInput.addEventListener('keydown', (e) => {
+            if (e.key === "Enter") {
+              saveChanges();
+            }
+          });
+        })
+      }
+    };
+
+    var deleteTask = function () {
+      let deleteBtn = document.getElementsByClassName('delete');
+      for (var i = 0; i < deleteBtn.length; i++) {
+        deleteBtn[i].addEventListener('click', function () {
+          let id = this.parentElement.getAttribute('data-id');
+          tasksData = tasksData.filter(x => {
+            return x.id !== id;
+          });
+          initialToDoData()
+        })
+      }
+    };
+
+    var initialToDoData = function () {
+      let itemsToDo = '';
+      let itemsCompleted = '';
+      tasksData.forEach((val) => {
+        if (val.completed) {
+          itemsCompleted +=
+          `<li data-id="${val.id}">
+            <label for="checkbox-${val.id}">
+              <input type="checkbox" class="check-completed" checked id="checkbox-${val.id}" data-id="${val.id}">
+            </label>
+            <h4>${val.title}</h4>
+            <label for="text-${val.id}">
+              <input type="text" id="text-${val.id}">
+            </label>
+            <button class="edit">Edit</button>
+            <button class="save" style="display: none">Save</button>
+            <button class="delete">Delete</button>
+          </li>`
+        } else {
+          itemsToDo +=
+          `<li data-id="${val.id}">
+            <label for="checkbox-${val.id}">
+              <input type="checkbox" class="check-to-do" id="checkbox-${val.id}" data-id="${val.id}">
+            </label>
+            <h4>${val.title}</h4>
+            <label for="text-${val.id}">
+              <input type="text" id="text-${val.id}">
+            </label>
+            <button class="edit">Edit</button>
+            <button class="save" style="display: none">Save</button>
+            <button class="delete">Delete</button>
+          </li>`
+        }
+      });
+
+      incompleteTasksHolder.innerHTML = itemsToDo;
+      completedTasksHolder.innerHTML = itemsCompleted;
+
+      var checkBoxToDo = document.getElementsByClassName("check-to-do");
+      var checkBoxCompleted = document.getElementsByClassName("check-completed");
+
+      for (var i = 0; i < checkBoxToDo.length; i++) {
+        checkBoxToDo[i].addEventListener('click', function () {
+          tasksData.forEach((val) => {
+            if (val.id === this.getAttribute('data-id')) {
+              val.completed = true;
+              initialToDoData();
+            }
+          });
+        })
+      }
+
+      for (var i = 0; i < checkBoxCompleted.length; i++) {
+        checkBoxCompleted[i].addEventListener('click', function () {
+          tasksData.forEach((val) => {
+            if (val.id === this.getAttribute('data-id')) {
+              val.completed = false;
+              initialToDoData();
+            }
+          });
+        })
+      }
+
+      editTask();
+
+      deleteTask();
+
+      localStorage.setItem('tasksData', JSON.stringify(tasksData));
+    };
+
+    initialToDoData();
+
+    addButton.addEventListener("click", addTask);
+    taskInput.addEventListener('keydown', (e) => {
+      if (e.key === "Enter") {
+        addTask();
+      }
+    });
+  }());
+</script>
+
+</body>
+
+</html>
+
+<style type="text/css">
+  /* Basic Style */
+  html body {
+    background: #ffffff;
+    color: #333;
+    font-family: Lato, sans-serif;
+  }
+
+  html body .container {
+    display: block;
+    max-width: 600px;
+    margin: 100px auto 0;
+  }
+
+  html body .container .row {
+    display: flex;
+    flex-direction: column;
+  }
+
+  html body .container .row .item {
+    width: 100%;
+  }
+
+  html body .container .row .item .add-item {
+    display: flex;
+    align-items: center;
+  }
+
+  html body ul {
+    margin: 0px;
+    padding: 0;
+  }
+
+  html body li {
+    display: flex;
+    align-items: center;
+  }
+
+  html body li, html body h3 {
+    list-style :none;
+  }
+
+  html body input, html body button {
+    outline: none;
+  }
+
+  html body button {
+    background: none;
+    border: 0px;
+    color: #888888;
+    font-size: 15px;
+    width: 60px;
+    margin: 10px 0 0;
+    font-family: Lato, sans-serif;
+    cursor: pointer;;
+  }
+
+
+
+
+  html body button :hover {
+    color: #333;
+  }
+
+  html body input[type="text"].invalid {
+    border-color: #CF2323;
+  }
+
+  /* Heading */
+  html body h3 {
+    color: #333333;
+    font-weight: 700;
+    font-size: 15px;
+    border-bottom: 2px solid #333;
+    padding: 30px 0 10px;
+    margin: 0px;
+    text-transform: uppercase;
+  }
+
+  html body label[for='new-task'] {
+    display: block;
+    margin-top: 20px;
+  }
+
+  html body input[type="text"]  {
+    margin: 0;
+    font-size: 18px;
+    line-height: 18px;
+    height: 18px;
+    padding: 10px;
+    border: 1px solid #ddd;
+    background: #fff;
+    border-radius: 6px;
+    font-family: Lato, sans-serif;
+    color: #888;
+  }
+
+  html body input[type="text"] :focus {
+    color: #333;
+  }
+
+  /* New Task */
+  html body input#new-task   {
+    width: 318px;
+  }
+
+  html body p > button :hover {
+    color: #0FC57C;
+  }
+
+  /* Task list */
+  html body li {
+    overflow: hidden;
+    padding: 20px 0px;
+    border-bottom: 1px solid #eee;
+  }
+
+  html body li > input[type="checkbox"] {
+    margin: 0 10px;
+    position: relative;
+    top: 15px;
+  }
+
+  html body li > h4 {
+    font-size:18px;
+    line-height: 40px;
+    width: 237px;
+    padding:0 0 0 11px;
+    margin: 0;
+  }
+
+  html body li >  input[type="text"] {
+    width: 226px;
+  }
+
+  html body li > .delete :hover {
+    color: #CF2323;
+  }
+
+  /* Completed */
+  html body #completed-tasks h4 {
+    text-decoration: line-through;
+    color: #888;
+  }
+
+  /* Edit Task */
+  html body ul li input[type=text] {
+    display :none;
+  }
+
+  html body ul li.editMode input[type=text] {
+    display :block;
+    width: 213px;
+    margin-left: 11px;
+  }
+
+  html body ul li.editMode h4 {
+    display :none;
+  }
+
+  @media (max-width: 375px) {
+    html body .container .row {
+      flex-direction: column;
+    }
+
+    html body .container .row .item {
+      width: 100%;
+    }
+
+    html body .container .row .item .add-item {
+      flex-direction: column;
+    }
+  }
+</style>
